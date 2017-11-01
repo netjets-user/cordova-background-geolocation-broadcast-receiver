@@ -8,21 +8,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
 
-import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
-import org.xml.sax.InputSource;
-import org.xml.sax.XMLReader;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
 import java.net.URL;
 
 import javax.net.ssl.HttpsURLConnection;
-import javax.xml.parsers.SAXParser;
-import javax.xml.parsers.SAXParserFactory;
 
 /**
  * This BroadcastReceiver receives broadcasted events from the BackgroundGeolocation plugin.
@@ -37,16 +30,7 @@ import javax.xml.parsers.SAXParserFactory;
  *
  * This BroadcastReceiver receives the following events:
  *
- * @event heartbeat         BackgroundGeolocation.EVENT_HEARTBEAT
- * @event motionchange      BackgroundGeolocation.EVENT_MOTIONCHANGE
- * @event location          BackgroundGeolocation.EVENT_LOCATION
- * @event geofence          BackgroundGeolocation.EVENT_GEOFENCE
  * @event http              BackgroundGeolocation.EVENT_HTTP
- * @event schedule          BackgroundGeolocation.EVENT_SCHEDULE
- * @event activitychange    BackgroundGeolocation.EVENT_ACTIVITYCHANGE
- * @event providerchange    BackgroundGeolocation.EVENT_PROVIDERCHANGE
- * @event geofenceschange   BackgroundGeolocation.EVENT_GEOFENCESCHANGE
- * @event heartbeat         BackgroundGeolocation.EVENT_BOOT
  *
  */
 public class EventReceiver extends BroadcastReceiver {
@@ -59,92 +43,8 @@ public class EventReceiver extends BroadcastReceiver {
         TSLog.logger.info(message);
 
         // Decode event name
-        if (BackgroundGeolocation.EVENT_HEARTBEAT.equalsIgnoreCase(eventName)) {
-            onHeartbeat(context, intent);
-        } else if (BackgroundGeolocation.EVENT_MOTIONCHANGE.equalsIgnoreCase(eventName)) {
-            onMotionChange(context, intent);
-        } else if (BackgroundGeolocation.EVENT_LOCATION.equalsIgnoreCase(eventName)) {
-            onLocation(context, intent);
-        } else if (BackgroundGeolocation.EVENT_GEOFENCE.equalsIgnoreCase(eventName)) {
-            onGeofence(context, intent);
-        } else if (BackgroundGeolocation.EVENT_HTTP.equalsIgnoreCase(eventName)) {
+        if (BackgroundGeolocation.EVENT_HTTP.equalsIgnoreCase(eventName)) {
             onHttp(context, intent);
-        } else if (BackgroundGeolocation.EVENT_SCHEDULE.equalsIgnoreCase(eventName)) {
-            onSchedule(context, intent);
-        } else if (BackgroundGeolocation.EVENT_ACTIVITYCHANGE.equalsIgnoreCase(eventName)) {
-            onActivityChange(context, intent);
-        } else if (BackgroundGeolocation.EVENT_PROVIDERCHANGE.equalsIgnoreCase(eventName)) {
-            onProviderChange(context, intent);
-        } else if (BackgroundGeolocation.EVENT_GEOFENCESCHANGE.equalsIgnoreCase(eventName)) {
-            onGeofencesChange(context, intent);
-        } else if (BackgroundGeolocation.EVENT_BOOT.equalsIgnoreCase(eventName)) {
-            onBoot(context, intent);
-        } else if (BackgroundGeolocation.EVENT_TERMINATE.equalsIgnoreCase(eventName)) {
-            onTerminate(context, intent);
-        }
-    }
-
-    /**
-     * @event heartbeat
-     * @param {Boolean} isMoving
-     * @param {JSONObject} location
-     */
-    private void onHeartbeat(Context context, Intent intent) {
-        int status = intent.getIntExtra("status", -1);
-        if (status == 401 || status == 403) {
-            refreshToken(context, intent);
-        }
-    }
-
-    /**
-     * @event motionchange
-     * @param {Boolean} isMoving
-     * @param {JSONObject} location
-     */
-    private void onMotionChange(Context context, Intent intent) {
-        boolean isMoving = intent.getBooleanExtra("isMoving", false);
-        try {
-            JSONObject location = new JSONObject(intent.getStringExtra("location"));
-            TSLog.logger.debug(location.toString());
-        } catch (JSONException e) {
-            TSLog.logger.error(TSLog.error(e.getMessage()));
-        }
-    }
-
-    /**
-     * @event location
-     * @param {JSONObject} location
-     */
-    private void onLocation(Context context, Intent intent) {
-        try {
-            JSONObject location = new JSONObject(intent.getStringExtra("location"));
-            TSLog.logger.debug(location.toString());
-        } catch (JSONException e) {
-            TSLog.logger.error(e.getMessage());
-        }
-        int status = intent.getIntExtra("status", -1);
-        if (status == 401 || status == 403) {
-            refreshToken(context, intent);
-        }
-
-    }
-
-    /**
-     * @event geofence
-     * @param {JSONObject} geofence
-     */
-    private void onGeofence(Context context, Intent intent) {
-        try {
-            JSONObject geofenceEvent = new JSONObject(intent.getStringExtra("geofence"));
-            String action = geofenceEvent.getString("action");
-            String identifier = geofenceEvent.getString("identifier");
-            JSONObject location = geofenceEvent.getJSONObject("location");
-            if (geofenceEvent.has("extras")) {
-                JSONObject extras = geofenceEvent.getJSONObject("extras");
-            }
-            TSLog.logger.debug(geofenceEvent.toString());
-        } catch (JSONException e) {
-            TSLog.logger.error(TSLog.error(e.getMessage()));
         }
     }
 
@@ -168,24 +68,25 @@ public class EventReceiver extends BroadcastReceiver {
             JSONObject headers = config.getJSONObject("headers");
             JSONObject extras = config.getJSONObject("extras");
             String refreshUrl = extras.getString("refreshUrl");
+            JSONObject currentToken = extras.getJSONObject("token");
+            String refreshToken = currentToken.getString("refresh_token");
 
             // Execute an HTTP request to request new auth token
             if (refreshUrl != null && refreshUrl.length() > 0) {
-                JSONObject myNewToken = getNewTokenFromServer(refreshUrl);
+                JSONObject myNewToken = getNewTokenFromServer(refreshUrl+ "&refresh_token="+refreshToken);
 
 
                 if (myNewToken != null) {
-                    String newAccessToken = (String)myNewToken.get("access_token");
+                    String newAccessToken = myNewToken.getString("access_token");
+                    String newRefreshToken = myNewToken.getString("refresh_token");
                     // Re-configure BackgroundGeolocation
                     headers.remove("Authorization");
                     headers.put("Authorization", "Bearer " + newAccessToken);
 
-                    String newRefreshUrl = refreshUrl.substring(0,refreshUrl.indexOf("refresh_token=")+14) + myNewToken.getString("refresh_token");
+                    String newRefreshUrl = refreshUrl + "&refresh_token="+newRefreshToken;
                     config.put("headers", headers);
                     extras.remove("token");
-                    extras.remove("refreshUrl");
                     extras.put("token", myNewToken);
-                    extras.put("refreshUrl", newRefreshUrl);
                     config.put("extras", extras);
 
                     // Same idea as the Javascript API
@@ -219,9 +120,6 @@ public class EventReceiver extends BroadcastReceiver {
 
     private JSONObject getNewTokenFromServer(String refreshUrl) {
         //initialize http connection to layer7
-//        could we squirl away a few extras in the bgGeo config -- like token endpoint, clicnet id/secret and full token with access/refresh
-        //get the last token from ?????
-        //post refresh_token request -- gonna need id/secret, url, last token
         //return a json of the response
         //use the extras.refreshUrl to post request for new token, replace the refresh token with the one returned -- how to get to storage for the reset of the app?
 
@@ -240,98 +138,6 @@ public class EventReceiver extends BroadcastReceiver {
     }
 
     /**
-     * @event schedule
-     * @param {JSONObject} state
-     */
-    private void onSchedule(Context context, Intent intent) {
-        try {
-            JSONObject state = new JSONObject(intent.getStringExtra("state"));
-            TSLog.logger.debug(state.toString());
-        } catch (JSONException e) {
-            TSLog.logger.error(TSLog.error(e.getMessage()));
-        }
-    }
-
-    /**
-     * @event activitychange
-     * @param {String} activity
-     */
-    private void onActivityChange(Context context, Intent intent) {
-        String activityName = intent.getStringExtra("activity");
-        Integer confidence = intent.getIntExtra("confidence", -1);
-        TSLog.logger.debug(activityName + " " + confidence + "%");
-//        refreshToken(context, intent);
-
-    }
-
-    /**
-     * @event providerchange
-     * @param {String} activityName
-     */
-    private void onProviderChange(Context context, Intent intent) {
-        try {
-            JSONObject provider = new JSONObject(intent.getStringExtra("provider"));
-            TSLog.logger.debug(provider.toString());
-        } catch (JSONException e) {
-            TSLog.logger.error(TSLog.error(e.getMessage()));
-        }
-    }
-
-    /**
-     * @event geofenceschange
-     * @param {JSONArray} on
-     * @param {JSONArray} off
-     */
-    private void onGeofencesChange(Context context, Intent intent) {
-        TSLog.logger.debug("geofenceschange: " + intent.getExtras());
-        try {
-            JSONObject event = new JSONObject(intent.getStringExtra("geofenceschange"));
-            JSONArray on = event.getJSONArray("on");
-            JSONArray off = event.getJSONArray("off");
-            TSLog.logger.debug("on: " + on.toString() + "\noff:" + off.toString());
-        } catch (JSONException e) {
-            TSLog.logger.error(TSLog.error(e.getMessage()));
-        }
-    }
-
-    /**
-     * @event boot
-     * @param {JSONObject} state
-     */
-    private void onBoot(Context context, Intent intent) {
-        BackgroundGeolocation adapter = BackgroundGeolocation.getInstance(context, intent);
-        JSONObject state = adapter.getState();
-    }
-
-    /**
-     * @event terminate
-     * @param {JSONObject} state
-     */
-    private void onTerminate(Context context, Intent intent) {
-        BackgroundGeolocation adapter = BackgroundGeolocation.getInstance(context, intent);
-        JSONObject state = adapter.getState();
-/*
-        try {
-            JSONObject headers = state.getJSONObject("headers");
-            String authHeader = headers.getString("Authorization");
-            headers.remove("Authorization");
-            headers.put("Authorization",authHeader+"zzz");
-            adapter.setConfig(state, new TSCallback() {
-                @Override
-                public void onSuccess() {
-
-                }
-
-                @Override
-                public void onFailure(String s) {
-
-                }
-            });
-        } catch (Exception e) {}
-*/
-    }
-
-    /**
      * Fetch the last portion of the Intent action foo.bar.EVENT_NAME -> event_name
      * @param {String} action
      * @return {string} eventName
@@ -347,10 +153,9 @@ class RefreshTokenTask extends AsyncTask<String, Integer, JSONObject> {
         try {
             String responseMessage = sendPost(refreshUrls[0]);
             if (responseMessage != null && responseMessage.length() > 0) {
-                JSONObject newToken = new JSONObject(responseMessage);
-                return newToken;
+                return new JSONObject(responseMessage);
             } else {
-                return null;
+                return null; //could not refresh -- this may be really bad -- gotta login again (send local notification?)
             }
 
         } catch (Exception e) {
@@ -366,8 +171,6 @@ class RefreshTokenTask extends AsyncTask<String, Integer, JSONObject> {
 
         //add reuqest header
         con.setRequestMethod("POST");
-//        con.setRequestProperty("User-Agent", USER_AGENT);
-//        con.setRequestProperty("Accept-Language", "en-US,en;q=0.5");
         con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
         con.setRequestProperty("appagent", "MDSUser");
         con.setRequestProperty("X-Environment", "itg1");
