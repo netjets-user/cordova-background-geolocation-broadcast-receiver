@@ -14,6 +14,7 @@ import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.util.Date;
 
 import javax.net.ssl.HttpsURLConnection;
 
@@ -129,6 +130,7 @@ public class EventReceiver extends BroadcastReceiver {
             }
             JSONObject newToken  = new RefreshTokenTask().execute(refreshUrl).get();
             System.out.println("New Token: "+newToken.toString(4));
+            newToken.lastUpdate = new Date().getTime();
             return newToken;
 
         } catch (Exception e) {
