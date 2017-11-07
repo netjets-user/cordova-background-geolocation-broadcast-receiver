@@ -130,7 +130,7 @@ public class EventReceiver extends BroadcastReceiver {
             }
             JSONObject newToken  = new RefreshTokenTask().execute(refreshUrl).get();
             System.out.println("New Token: "+newToken.toString(4));
-            newToken.put('lastUpdate', new Date().getTime());
+            newToken.put("lastUpdate", new Date().getTime());
             return newToken;
 
         } catch (Exception e) {
