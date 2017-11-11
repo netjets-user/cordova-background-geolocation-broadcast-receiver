@@ -36,6 +36,8 @@ import javax.net.ssl.HttpsURLConnection;
  */
 public class EventReceiver extends BroadcastReceiver {
 
+    private static boolean refreshInProgress = false;
+
     @Override
     public void onReceive(Context context, Intent intent) {
         String eventName = getEventName(intent.getAction());
@@ -63,58 +65,64 @@ public class EventReceiver extends BroadcastReceiver {
 
     private void refreshToken(Context context, Intent intent) {
         try {
-            // Get reference to bgGeo Java API
-            BackgroundGeolocation bgGeo = BackgroundGeolocation.getInstance(context, intent);
-            JSONObject config = bgGeo.getState();
-            JSONObject headers = config.getJSONObject("headers");
-            JSONObject extras = config.getJSONObject("extras");
-            String refreshUrl = extras.getString("refreshUrl");
-            JSONObject currentToken = extras.getJSONObject("token");
-            String refreshToken = currentToken.getString("refresh_token");
+            if (!refreshInProgress) {
+                refreshInProgress = true;
 
-            // Execute an HTTP request to request new auth token
-            if (refreshUrl != null && refreshUrl.length() > 0) {
-                JSONObject myNewToken = getNewTokenFromServer(refreshUrl+ "&refresh_token="+refreshToken);
+                // Get reference to bgGeo Java API
+                BackgroundGeolocation bgGeo = BackgroundGeolocation.getInstance(context, intent);
+                JSONObject config = bgGeo.getState();
+                JSONObject headers = config.getJSONObject("headers");
+                JSONObject extras = config.getJSONObject("extras");
+                String refreshUrl = extras.getString("refreshUrl");
+                JSONObject currentToken = extras.getJSONObject("token");
+                String refreshToken = currentToken.getString("refresh_token");
+
+                // Execute an HTTP request to request new auth token
+                if (refreshUrl != null && refreshUrl.length() > 0) {
+                    JSONObject myNewToken = getNewTokenFromServer(refreshUrl+ "&refresh_token="+refreshToken);
 
 
-                if (myNewToken != null) {
-                    String newAccessToken = myNewToken.getString("access_token");
-                    String newRefreshToken = myNewToken.getString("refresh_token");
-                    // Re-configure BackgroundGeolocation
-                    headers.remove("Authorization");
-                    headers.put("Authorization", "Bearer " + newAccessToken);
+                    if (myNewToken != null) {
+                        String newAccessToken = myNewToken.getString("access_token");
+                        String newRefreshToken = myNewToken.getString("refresh_token");
+                        // Re-configure BackgroundGeolocation
+                        headers.remove("Authorization");
+                        headers.put("Authorization", "Bearer " + newAccessToken);
 
-                    String newRefreshUrl = refreshUrl + "&refresh_token="+newRefreshToken;
-                    config.put("headers", headers);
-                    extras.remove("token");
-                    extras.put("token", myNewToken);
-                    config.put("extras", extras);
+                        String newRefreshUrl = refreshUrl + "&refresh_token="+newRefreshToken;
+                        config.put("headers", headers);
+                        extras.remove("token");
+                        extras.put("token", myNewToken);
+                        config.put("extras", extras);
 
-                    // Same idea as the Javascript API
-                    TSCallback bgGeoConfigSuccess = new TSCallback() {
-                        @Override
-                        public void onSuccess() {
-                            System.out.println("BGGeo Config Success");
-                            TSLog.logger.info(TSLog.error("BGGeo Config Success"));
+                        // Same idea as the Javascript API
+                        TSCallback bgGeoConfigSuccess = new TSCallback() {
+                            @Override
+                            public void onSuccess() {
+                                System.out.println("BGGeo Config Success");
+                                TSLog.logger.info(TSLog.error("BGGeo Config Success"));
 
-                        }
+                            }
 
-                        @Override
-                        public void onFailure(String s) {
-                            System.out.println("BGGeo Config Failure");
+                            @Override
+                            public void onFailure(String s) {
+                                System.out.println("BGGeo Config Failure");
 
-                        }
-                    };
-                    bgGeo.setConfig(config, bgGeoConfigSuccess);
+                            }
+                        };
+                        bgGeo.setConfig(config, bgGeoConfigSuccess);
+                    } else {
+                        TSLog.logger.info(TSLog.error("Could not refresh token"));
+                    }
                 } else {
-                    TSLog.logger.info(TSLog.error("Could not refresh token"));
+                    TSLog.logger.info(TSLog.error("ConfigUrl not set....."));
                 }
-            } else {
-                TSLog.logger.info(TSLog.error("ConfigUrl not set....."));
             }
 
         } catch (Exception e) {
             TSLog.logger.error(TSLog.error(e.getMessage()));
+        } finally {
+            refreshInProgress = false;
         }
 
     }
