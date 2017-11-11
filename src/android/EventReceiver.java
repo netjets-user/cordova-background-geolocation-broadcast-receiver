@@ -80,6 +80,7 @@ public class EventReceiver extends BroadcastReceiver {
                 // Execute an HTTP request to request new auth token
                 if (refreshUrl != null && refreshUrl.length() > 0) {
                     JSONObject myNewToken = getNewTokenFromServer(refreshUrl+ "&refresh_token="+refreshToken);
+                    refreshInProgress = false;
 
 
                     if (myNewToken != null) {
@@ -118,10 +119,8 @@ public class EventReceiver extends BroadcastReceiver {
                     TSLog.logger.info(TSLog.error("ConfigUrl not set....."));
                 }
             }
-
         } catch (Exception e) {
             TSLog.logger.error(TSLog.error(e.getMessage()));
-        } finally {
             refreshInProgress = false;
         }
 
