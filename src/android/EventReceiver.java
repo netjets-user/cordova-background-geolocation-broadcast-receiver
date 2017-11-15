@@ -97,6 +97,7 @@ public class EventReceiver extends BroadcastReceiver {
                         config.put("extras", extras);
 
                         // Same idea as the Javascript API
+/*
                         TSCallback bgGeoConfigSuccess = new TSCallback() {
                             @Override
                             public void onSuccess() {
@@ -111,7 +112,8 @@ public class EventReceiver extends BroadcastReceiver {
 
                             }
                         };
-                        bgGeo.setConfig(config, bgGeoConfigSuccess);
+*/
+                        bgGeo.setConfig(config);
                     } else {
                         TSLog.logger.info(TSLog.error("Could not refresh token"));
                     }
