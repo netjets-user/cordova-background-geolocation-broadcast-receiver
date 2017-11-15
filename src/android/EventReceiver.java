@@ -1,7 +1,6 @@
 package com.transistorsoft.cordova.bggeo;
 
 import com.transistorsoft.locationmanager.adapter.BackgroundGeolocation;
-import com.transistorsoft.locationmanager.adapter.callback.TSCallback;
 import com.transistorsoft.locationmanager.logger.TSLog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -96,24 +95,7 @@ public class EventReceiver extends BroadcastReceiver {
                         extras.put("token", myNewToken);
                         config.put("extras", extras);
 
-                        // Same idea as the Javascript API
-/*
-                        TSCallback bgGeoConfigSuccess = new TSCallback() {
-                            @Override
-                            public void onSuccess() {
-                                System.out.println("BGGeo Config Success");
-                                TSLog.logger.info(TSLog.error("BGGeo Config Success"));
-
-                            }
-
-                            @Override
-                            public void onFailure(String s) {
-                                System.out.println("BGGeo Config Failure");
-
-                            }
-                        };
-*/
-                        bgGeo.setConfig(config);
+                        bgGeo.setConfig(config, null);
                     } else {
                         TSLog.logger.info(TSLog.error("Could not refresh token"));
                     }
