@@ -1,11 +1,18 @@
 package com.transistorsoft.cordova.bggeo;
 
+import com.netjets.RAMP.R;
 import com.transistorsoft.locationmanager.adapter.BackgroundGeolocation;
+import com.transistorsoft.locationmanager.adapter.callback.TSCallback;
 import com.transistorsoft.locationmanager.logger.TSLog;
+
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.TaskStackBuilder;
 
 import org.json.JSONObject;
 
@@ -95,12 +102,30 @@ public class EventReceiver extends BroadcastReceiver {
                         extras.put("token", myNewToken);
                         config.put("extras", extras);
 
-                        bgGeo.setConfig(config, null);
+                        // Same idea as the Javascript API
+                        TSCallback bgGeoConfigSuccess = new TSCallback() {
+                            @Override
+                            public void onSuccess() {
+                                System.out.println("BGGeo Config Success");
+                                TSLog.logger.info(TSLog.error("BGGeo Config Success"));
+
+                            }
+
+                            @Override
+                            public void onFailure(String s) {
+                                System.out.println("BGGeo Config Failure");
+
+                            }
+                        };
+
+                        bgGeo.setConfig(config, bgGeoConfigSuccess);
                     } else {
                         TSLog.logger.info(TSLog.error("Could not refresh token"));
+                        sendNotification(context, intent, "Could not refresh token");
                     }
                 } else {
                     TSLog.logger.info(TSLog.error("ConfigUrl not set....."));
+                    sendNotification(context, intent, "ConfigUrl not set.....");
                 }
             }
         } catch (Exception e) {
@@ -120,8 +145,10 @@ public class EventReceiver extends BroadcastReceiver {
                 return null;
             }
             JSONObject newToken  = new RefreshTokenTask().execute(refreshUrl).get();
-            System.out.println("New Token: "+newToken.toString(4));
-            newToken.put("lastUpdate", new Date().getTime());
+            if (newToken != null) {
+                System.out.println("New Token: "+newToken.toString(4));
+                newToken.put("lastUpdate", new Date().getTime());
+            }
             return newToken;
 
         } catch (Exception e) {
@@ -129,6 +156,51 @@ public class EventReceiver extends BroadcastReceiver {
             return null;
         }
     }
+
+    public void sendNotification(Context context, Intent intent, String msg) {
+        //Could just delegate to the local notification plugin assuming it's installed.
+/*
+        try {
+            JSONObject msg2 = new JSONObject("{id:1, title: 'Attention!', text: 'Your login has expired.  Please open the app and log back in.'}");
+            Manager.getInstance(context).schedule(msg2, TriggerReceiver.class);
+        } catch (Exception e) {
+
+        }
+*/
+
+
+// The id of the channel.
+        String CHANNEL_ID = "RAMP";
+        NotificationCompat.Builder mBuilder =
+                new NotificationCompat.Builder(context, CHANNEL_ID)
+                        .setSmallIcon(R.drawable.ic_fingerprint_error)
+                        .setContentTitle("RAMP")
+                        .setContentText(msg);
+
+// The stack builder object will contain an artificial back stack for the
+// started Activity.
+// This ensures that navigating backward from the Activity leads out of
+// your app to the Home screen.
+        TaskStackBuilder stackBuilder = TaskStackBuilder.create(context);
+// Adds the back stack for the Intent (but not the Intent itself)
+//        stackBuilder.addParentStack(ResultActivity.class);
+// Adds the Intent that starts the Activity to the top of the stack
+        stackBuilder.addNextIntent(intent);
+        PendingIntent resultPendingIntent =
+                stackBuilder.getPendingIntent(
+                        0,
+                        PendingIntent.FLAG_UPDATE_CURRENT
+                );
+        mBuilder.setContentIntent(resultPendingIntent);
+        NotificationManager mNotificationManager =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+
+// mNotificationId is a unique integer your app uses to identify the
+// notification. For example, to cancel the notification, you can pass its ID
+// number to NotificationManager.cancel().
+        mNotificationManager.notify(999, mBuilder.build());
+    }
+
 
     /**
      * Fetch the last portion of the Intent action foo.bar.EVENT_NAME -> event_name
