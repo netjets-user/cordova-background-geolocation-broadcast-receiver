@@ -159,16 +159,15 @@ public class EventReceiver extends BroadcastReceiver {
 
     public void sendNotification(Context context, Intent intent, String msg) {
         //Could just delegate to the local notification plugin assuming it's installed.
-/*
         try {
             JSONObject msg2 = new JSONObject("{id:1, title: 'Attention!', text: 'Your login has expired.  Please open the app and log back in.'}");
             Manager.getInstance(context).schedule(msg2, TriggerReceiver.class);
         } catch (Exception e) {
 
         }
-*/
 
 
+/*
 // The id of the channel.
         String CHANNEL_ID = "RAMP";
         NotificationCompat.Builder mBuilder =
@@ -199,6 +198,7 @@ public class EventReceiver extends BroadcastReceiver {
 // notification. For example, to cancel the notification, you can pass its ID
 // number to NotificationManager.cancel().
         mNotificationManager.notify(999, mBuilder.build());
+*/
     }
 
 

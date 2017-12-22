@@ -14,7 +14,9 @@
         <engine name="cordova" version=">=5.0.0" />
     </engines>
 
-     <!-- android -->
+    <dependency id="de.appplant.cordova.plugin.local-notification" />
+
+    <!-- android -->
     <platform name="android">
         <source-file src="src/android/EventReceiver.java" target-dir="src/com/transistorsoft/cordova/bggeo" />
 
