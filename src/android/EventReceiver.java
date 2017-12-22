@@ -1,18 +1,13 @@
 package com.transistorsoft.cordova.bggeo;
 
-import com.netjets.RAMP.R;
-import com.transistorsoft.locationmanager.adapter.BackgroundGeolocation;
-import com.transistorsoft.locationmanager.adapter.callback.TSCallback;
-import com.transistorsoft.locationmanager.logger.TSLog;
-
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.app.TaskStackBuilder;
+
+import com.transistorsoft.locationmanager.adapter.BackgroundGeolocation;
+import com.transistorsoft.locationmanager.adapter.callback.TSCallback;
+import com.transistorsoft.locationmanager.logger.TSLog;
 
 import org.json.JSONObject;
 
@@ -23,6 +18,9 @@ import java.net.URL;
 import java.util.Date;
 
 import javax.net.ssl.HttpsURLConnection;
+
+import de.appplant.cordova.plugin.localnotification.TriggerReceiver;
+import de.appplant.cordova.plugin.notification.Manager;
 
 /**
  * This BroadcastReceiver receives broadcasted events from the BackgroundGeolocation plugin.
